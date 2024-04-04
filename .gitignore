@@ -1,5 +1,5 @@
 .vs/
-data/
 x64/
 packages/
 *.user
+/learn/1_backprop/backprop_cpp/data/
