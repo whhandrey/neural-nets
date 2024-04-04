@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Net">
+      <UniqueIdentifier>{5fa0a071-59f1-427e-89d3-ffc44726e4f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{3b27b993-c7f8-49f6-b3b3-dd60c89c404a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\Loader">
+      <UniqueIdentifier>{9080adc7-33ee-49b2-a077-192b1bc63211}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Net\Net.hpp">
+      <Filter>Net</Filter>
+    </ClInclude>
+    <ClInclude Include="Net\Activation.hpp">
+      <Filter>Net</Filter>
+    </ClInclude>
+    <ClInclude Include="Data\Loader\Loader.hpp">
+      <Filter>Data\Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Data\Data.hpp">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Net\Loss.hpp">
+      <Filter>Net</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Net\Net.cpp">
+      <Filter>Net</Filter>
+    </ClCompile>
+    <ClCompile Include="Net\Activation.cpp">
+      <Filter>Net</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Data\Loader\Loader.cpp">
+      <Filter>Data\Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Net\Loss.cpp">
+      <Filter>Net</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
