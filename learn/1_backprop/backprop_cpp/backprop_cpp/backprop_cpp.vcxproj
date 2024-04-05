@@ -70,6 +70,12 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>..\..\..\data_loader;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>..\..\..\data_loader;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -132,14 +138,14 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Data\Data.hpp" />
-    <ClInclude Include="Data\Loader\Loader.hpp" />
+    <ClInclude Include="..\..\..\data_loader\Data\Data.hpp" />
+    <ClInclude Include="..\..\..\data_loader\Data\Loader\Loader.hpp" />
     <ClInclude Include="Net\Activation.hpp" />
     <ClInclude Include="Net\Loss.hpp" />
     <ClInclude Include="Net\Net.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Data\Loader\Loader.cpp" />
+    <ClCompile Include="..\..\..\data_loader\Data\Loader\Loader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Net\Activation.cpp" />
     <ClCompile Include="Net\Loss.cpp" />

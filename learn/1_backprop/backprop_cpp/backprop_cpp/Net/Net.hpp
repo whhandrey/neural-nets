@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <tuple>
-#include "../Data/Data.hpp"
+#include "Data/Data.hpp"
 
 namespace net {
     using VecVecXf = std::vector<Eigen::VectorXf>;
