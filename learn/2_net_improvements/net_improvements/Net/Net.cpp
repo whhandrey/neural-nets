@@ -1,39 +1,31 @@
 #include "Net.hpp"
 #include "Activation.hpp"
-#include "Loss.hpp"
+#include "Cost.hpp"
 #include <random>
 #include <numeric>
 #include <iostream>
 
-namespace {
-    void FillData(float* data, int size) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-
-        // Define a standard Gaussian distribution with mean = 0 and std.dev. = 1
-        std::normal_distribution<float> dist(0.0f, 1.0f);
-
-        for (int i = 0; i < size; ++i) {
-            data[i] = dist(gen);
-        }
-    }
-
-    Eigen::MatrixXf GenerateMatrix(int rows, int cols) {
-        Eigen::MatrixXf mtx(rows, cols);
-
-        FillData(mtx.data(), rows * cols);
-        return mtx;
-    }
-
-    Eigen::VectorXf GenerateVector(int num) {
-        Eigen::VectorXf vec(num);
-
-        FillData(vec.data(), num);
-        return vec;
-    }
-}
-
 namespace net {
+    using VecVecXf = std::vector<Eigen::VectorXf>;
+    using VecMatrixXf = std::vector<Eigen::MatrixXf>;
+
+    using Ref = std::reference_wrapper<const data::PairXY>;
+    using VecXfRef = std::reference_wrapper<const Eigen::VectorXf>;
+    using VecVecXfRef = std::vector<VecXfRef>;
+
+    struct grad_pair {
+        VecMatrixXf m_dc_dw;
+        VecVecXf m_dc_db;
+
+        bool empty() const {
+            return m_dc_dw.empty() && m_dc_db.empty();
+        }
+
+        int size() {
+            return int(m_dc_dw.size());
+        }
+    };
+
     template <class Cont>
     void ShuffleInput(Cont& container) {
         std::random_device rd;
@@ -69,32 +61,115 @@ namespace net {
 
         return output;
     }
+
+    grad_pair SumGrads(grad_pair&& batch_grads, grad_pair grads) {
+        if (batch_grads.empty()) {
+            return grads;
+        }
+
+        for (int i = 0; i < int(batch_grads.size()); ++i) {
+            batch_grads.m_dc_dw[i] += grads.m_dc_dw[i];
+            batch_grads.m_dc_db[i] += grads.m_dc_db[i];
+        }
+
+        return batch_grads;
+    }
+}
+
+namespace init {
+    void FillData(float* data, int size) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+
+        // Define a standard Gaussian distribution with mean = 0 and std.dev. = 1
+        std::normal_distribution<float> dist(0.0f, 1.0f);
+
+        for (int i = 0; i < size; ++i) {
+            data[i] = dist(gen);
+        }
+    }
+
+    Eigen::MatrixXf GenerateMatrix(int rows, int cols) {
+        Eigen::MatrixXf mtx(rows, cols);
+
+        FillData(mtx.data(), rows * cols);
+        return mtx;
+    }
+
+    Eigen::VectorXf GenerateVector(int num) {
+        Eigen::VectorXf vec(num);
+
+        FillData(vec.data(), num);
+        return vec;
+    }
+
+    decltype(auto) DefaultWeightsAndBiases(const std::vector<int>& sizes) {
+        std::vector<Eigen::MatrixXf> weights;
+        weights.reserve(sizes.size() - 1);
+
+        std::vector<Eigen::VectorXf> biases;
+        biases.reserve(sizes.size() - 1);
+
+        for (size_t i = 0; i < sizes.size() - 1; ++i) {
+            weights.push_back(init::GenerateMatrix(sizes[i + 1], sizes[i]));
+            biases.push_back(init::GenerateVector(sizes[i + 1]));
+        }
+
+        return std::make_tuple(weights, biases);
+    }
 }
 
 namespace net {
-    Net::Net(const std::vector<int>& sizes)
-        : m_numLayers(int(sizes.size()))
-    {
-        m_weights.reserve(sizes.size() - 1);
-        m_biases.reserve(sizes.size() - 1);
+    class NetImpl : public Net {
+    public:
+        NetImpl(VecMatrixXf&& weights, VecVecXf&& biases, std::vector<activation::Ptr>&& acts, cost::Ptr cost);
 
-        for (size_t i = 0; i < sizes.size() - 1; ++i) {
-            m_weights.push_back(GenerateMatrix(sizes[i + 1], sizes[i]));
-            m_biases.push_back(GenerateVector(sizes[i + 1]));
-        }
+        Eigen::VectorXf FeedForward(Eigen::VectorXf x) override;
+        void StochasticGradDesc(data::Set& input, int epochs, int mini_batch_size, float learning_rate) override;
+
+    private:
+        VecVecXf Activations(const Ref& ref);
+        std::vector<VecVecXf> ActivationsBatch(const std::vector<Ref>& input);
+
+        std::vector<float> LossBatch(const std::vector<Ref>& input, const std::vector<VecVecXfRef>& activations);
+
+        grad_pair BackProp(const Eigen::VectorXf& y, const std::vector<VecXfRef>& activations);
+        grad_pair BackPropBatch(const std::vector<Ref>& input, const std::vector<VecVecXfRef>& activations, float learning_rate);
+
+        // batch_grads expected to be moved here
+        void GradDescent(grad_pair batch_grads);
+
+        int Evaluate(const std::vector<data::PairXY>& test_data);
+        void PrintEvalResult(int num_matches, int y_count, int epoch);
+
+    private:
+        const int m_numLayers;
+        cost::Ptr m_cost;
+
+        std::vector<Eigen::MatrixXf> m_weights;
+        std::vector<Eigen::VectorXf> m_biases;
+        std::vector<activation::Ptr> m_activations;
+    };
+
+    NetImpl::NetImpl(VecMatrixXf&& weights, VecVecXf&& biases, std::vector<activation::Ptr>&& acts, cost::Ptr cost)
+        : m_numLayers(int(acts.size()) + 1)
+        , m_weights{ std::move(weights) }
+        , m_biases{ std::move(biases) }
+        , m_activations{ std::move(acts) }
+        , m_cost{ std::move(cost) }
+    {
     }
 
-    Eigen::VectorXf Net::FeedForward(const Eigen::VectorXf& x) {
-        Eigen::VectorXf y = x;
+    Eigen::VectorXf NetImpl::FeedForward(Eigen::VectorXf x) {
 
         for (int i = 0; i < m_numLayers - 1; ++i) {
-            y = activation::sigmoid(m_weights[i] * y + m_biases[i]);
+            x = m_activations[i]->f(m_weights[i] * x + m_biases[i]);
         }
 
-        return y;
+        return x;
     }
 
-    void Net::StochasticGradDesc(data::Set& input, int epochs, int mini_batch_size, float learning_rate) {
+    void NetImpl::StochasticGradDesc(data::Set& input, int epochs, int mini_batch_size, float learning_rate) {
 
         auto& training_data = input.m_training_data;
         for (int i = 0; i < epochs; ++i) {
@@ -121,20 +196,20 @@ namespace net {
         }
     }
 
-    VecVecXf Net::Activations(const Ref& ref) {
+    VecVecXf NetImpl::Activations(const Ref& ref) {
         VecVecXf output;
         output.reserve(m_numLayers - 1);
 
         VecXfRef x = ref.get().first;
         for (int i = 0; i < m_numLayers - 1; ++i) {
-            output.push_back(activation::sigmoid(m_weights[i] * x.get() + m_biases[i]));
+            output.push_back(m_activations[i]->f(m_weights[i] * x.get() + m_biases[i]));
             x = output.back();
         }
 
         return output;
     }
 
-    std::vector<VecVecXf> Net::ActivationsBatch(const std::vector<Ref>& input) {
+    std::vector<VecVecXf> NetImpl::ActivationsBatch(const std::vector<Ref>& input) {
         std::vector<VecVecXf> output;
         output.reserve(input.size());
 
@@ -145,20 +220,20 @@ namespace net {
         return output;
     }
 
-    std::vector<float> Net::LossBatch(const std::vector<Ref>& input, const std::vector<VecVecXfRef>& activations) {
+    std::vector<float> NetImpl::LossBatch(const std::vector<Ref>& input, const std::vector<VecVecXfRef>& activations) {
         std::vector<float> loss_batch;
         loss_batch.reserve(input.size());
 
         for (int i = 0; i < int(input.size()); ++i) {
-            loss_batch.push_back(loss::mse(input[i].get().second, activations[i].back()));
+            loss_batch.push_back(m_cost->loss(input[i].get().second, activations[i].back()));
         }
 
         return loss_batch;
     }
 
-    Net::grad_pair Net::BackProp(const Eigen::VectorXf& y, const std::vector<VecXfRef>& activations) {
+    grad_pair NetImpl::BackProp(const Eigen::VectorXf& y, const std::vector<VecXfRef>& activations) {
 
-        Eigen::VectorXf dc_da = activations.back().get() - y;
+        Eigen::VectorXf dc_da = m_cost->dc_da(y, activations.back().get());
 
         std::vector<Eigen::MatrixXf> dc_dw_vec;
         dc_dw_vec.reserve(activations.size() - 1);
@@ -169,7 +244,7 @@ namespace net {
         for (int layer = m_numLayers - 2; layer >= 0; --layer) {
             const auto z = m_weights[layer] * activations[layer].get() + m_biases[layer];
 
-            const auto da_dz = activation::sigmoid_prime(z);
+            const auto da_dz = m_activations[layer]->f_prime(z);
             const auto dc_dz = Eigen::VectorXf{ dc_da.array() * da_dz.array() };
 
             dc_db_vec.push_back(dc_dz);
@@ -183,7 +258,7 @@ namespace net {
         return { dc_dw_vec, dc_db_vec };
     }
 
-    Net::grad_pair Net::BackPropBatch(const std::vector<Ref>& input, const std::vector<VecVecXfRef>& activations, float learning_rate) {
+    grad_pair NetImpl::BackPropBatch(const std::vector<Ref>& input, const std::vector<VecVecXfRef>& activations, float learning_rate) {
         grad_pair batch_grads;
 
         for (int i = 0; i < int(input.size()); ++i) {
@@ -200,20 +275,7 @@ namespace net {
         return batch_grads;
     }
 
-    Net::grad_pair Net::SumGrads(grad_pair&& batch_grads, grad_pair grads) {
-        if (batch_grads.empty()) {
-            return grads;
-        }
-
-        for (int i = 0; i < int(batch_grads.size()); ++i) {
-            batch_grads.m_dc_dw[i] += grads.m_dc_dw[i];
-            batch_grads.m_dc_db[i] += grads.m_dc_db[i];
-        }
-
-        return batch_grads;
-    }
-
-    void Net::GradDescent(grad_pair batch_grads) {
+    void NetImpl::GradDescent(grad_pair batch_grads) {
         int last_index = m_numLayers - 2;
 
         for (int i = 0; i < m_numLayers - 1; ++i) {
@@ -224,7 +286,7 @@ namespace net {
         }
     }
 
-    int Net::Evaluate(const std::vector<data::PairXY>& test_data) {
+    int NetImpl::Evaluate(const std::vector<data::PairXY>& test_data) {
         std::vector<Eigen::VectorXf> output;
         output.reserve(test_data.size());
 
@@ -243,7 +305,35 @@ namespace net {
         });
     }
 
-    void Net::PrintEvalResult(int num_matches, int y_count, int epoch) {
+    void NetImpl::PrintEvalResult(int num_matches, int y_count, int epoch) {
         std::cout << "Epoch: " << epoch << " : " << "num_matches: " << num_matches << '/' << y_count << std::endl;
+    }
+
+    Builder& Builder::AddInputLayer(int num_neurons) {
+        m_sizes.push_back(num_neurons);
+        return *this;
+    }
+
+    Builder& Builder::AddLayer(int num_neurons, activation::Type type) {
+        m_sizes.push_back(num_neurons);
+        m_activations.push_back(activation::Create(type));
+
+        return *this;
+    }
+
+    Builder& Builder::AddCost(cost::Type type) {
+        m_cost = cost::Create(type);
+        return *this;
+    }
+
+    std::unique_ptr<Net> Builder::Build() {
+        auto [weights, biases] = init::DefaultWeightsAndBiases(m_sizes);
+
+        return std::make_unique<NetImpl>(
+            std::move(weights),
+            std::move(biases),
+            std::move(m_activations),
+            std::move(m_cost)
+        );
     }
 }

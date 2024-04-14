@@ -138,14 +138,14 @@
     <ClCompile Include="..\..\data_loader\Data\Loader\Loader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Net\Activation.cpp" />
-    <ClCompile Include="Net\Loss.cpp" />
+    <ClCompile Include="Net\Cost.cpp" />
     <ClCompile Include="Net\Net.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\data_loader\Data\Data.hpp" />
     <ClInclude Include="..\..\data_loader\Data\Loader\Loader.hpp" />
     <ClInclude Include="Net\Activation.hpp" />
-    <ClInclude Include="Net\Loss.hpp" />
+    <ClInclude Include="Net\Cost.hpp" />
     <ClInclude Include="Net\Net.hpp" />
   </ItemGroup>
   <ItemGroup>

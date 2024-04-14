@@ -18,7 +18,7 @@
     <ClCompile Include="Net\Activation.cpp">
       <Filter>Net</Filter>
     </ClCompile>
-    <ClCompile Include="Net\Loss.cpp">
+    <ClCompile Include="Net\Cost.cpp">
       <Filter>Net</Filter>
     </ClCompile>
     <ClCompile Include="Net\Net.cpp">
@@ -36,7 +36,7 @@
     <ClInclude Include="Net\Activation.hpp">
       <Filter>Net</Filter>
     </ClInclude>
-    <ClInclude Include="Net\Loss.hpp">
+    <ClInclude Include="Net\Cost.hpp">
       <Filter>Net</Filter>
     </ClInclude>
     <ClInclude Include="Net\Net.hpp">
