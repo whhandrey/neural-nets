@@ -3,6 +3,8 @@
 
 namespace cost {
     namespace impl {
+        constexpr float eps = 1e-10f;
+
         class MSE : public Cost {
             float loss(const Eigen::VectorXf& y, const Eigen::VectorXf& a) override {
                 return (y - a).squaredNorm() / y.size();
@@ -16,11 +18,14 @@ namespace cost {
         class CrossEntropy : public Cost {
         public:
             float loss(const Eigen::VectorXf& y, const Eigen::VectorXf& a) override {
-                return 0.0f;
+                const auto first_term = y.array() * Eigen::log(a.array() + eps);
+                const auto second_term = (1.0f - y.array()) * Eigen::log( (1.0f - a.array()) + eps );
+
+                return -(first_term + second_term).mean();
             }
 
             Eigen::VectorXf dc_da(const Eigen::VectorXf& y, const Eigen::VectorXf& a) override {
-                return {};
+                return (a - y).array() / ( a.array() * (1.0f - a.array()) + eps );
             }
         };
     }

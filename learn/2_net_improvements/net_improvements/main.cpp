@@ -7,12 +7,12 @@ int main() {
         .AddInputLayer(784)
         .AddLayer(30, activation::Type::Sigmoid)
         .AddLayer(10, activation::Type::Sigmoid)
-        .AddCost(cost::Type::MSE)
+        .AddCost(cost::Type::CrossEntropy)
         .Build();
 
     const int num_epochs = 30;
     const int mini_batch_size = 10;
-    const float learning_rate = 3.0f;
+    const float learning_rate = 0.5f;
 
     auto set = data::loader::Load();
 
